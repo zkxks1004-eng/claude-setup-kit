@@ -1,0 +1,36 @@
+#!/bin/zsh
+# 회의 녹음 파일을 텍스트로 옮긴다. 사용법: transcribe <오디오파일> [언어코드]
+# whisper.cpp는 16kHz 모노 WAV만 받으므로 macOS 기본 afconvert로 먼저 변환한다.
+set -e
+
+WHISPER=~/tools/whisper.cpp/build/bin/whisper-cli
+MODEL=~/tools/whisper.cpp/models/ggml-large-v3-turbo.bin
+LANG=${2:-ko}
+
+if [ -z "$1" ]; then
+  echo "사용법: transcribe <오디오파일> [언어코드, 기본 ko]"
+  exit 1
+fi
+
+IN="$1"
+[ -f "$IN" ] || { echo "파일 없음: $IN"; exit 1; }
+
+BASE="${IN%.*}"
+WAV=$(mktemp -t transcribe).wav
+afconvert -f WAVE -d LEI16@16000 -c 1 "$IN" "$WAV"
+
+# 업무 용어를 미리 알려주면 일부는 잡히지만 전부는 아니다.
+VOCAB="누아, 마리트, 네이버, 하나투어, 토파스, 진에어, 아마데우스, 에어플러스, AGG, NDC, GDS, PNR, RBD, 발권, 운임, 수하물, 위탁, 기내, 초과요금, 운임브랜드, 노선구간, 브랜디드 페어, 부가서비스, 사업개발팀"
+
+# 10/7: 47분 회의 녹음에서 10분쯤부터 같은 문장이 2,000번 넘게 반복되는 헛들음이 났다.
+# -mc 0(앞 문장을 문맥으로 쓰지 않음) + -sns(말이 아닌 소리 토큰 억제)로 다시 돌리니 정상(513줄, 반복 0).
+"$WHISPER" -m "$MODEL" -f "$WAV" -l "$LANG" --prompt "$VOCAB" -mc 0 -sns -otxt -of "$BASE" 2>/dev/null
+
+# 회사명은 프롬프트로도 안 잡혀서("누아"를 매번 "노아"로 듣는다) 직접 고친다.
+# 다른 고유명사도 틀리는 게 보이면 여기에 추가할 것.
+sed -i '' 's/노아/누아/g' "${BASE}.txt"
+rm -f "$WAV"
+
+echo "저장됨: ${BASE}.txt"
+echo "---"
+cat "${BASE}.txt"

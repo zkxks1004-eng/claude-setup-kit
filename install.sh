@@ -6,11 +6,11 @@ KIT="$(cd "$(dirname "$0")" && pwd)"
 ok()   { printf '  ✓ %s\n' "$1"; }
 warn() { printf '  ! %s\n' "$1"; }
 # 단계별 예상 시간(초) — 남은 시간 안내용
-ETA=(0 20 150 90 20 5 5)
+ETA=(0 20 150 90 20 5 5 600)
 step() {
   local n=$1 left=0 i
-  for ((i=n; i<=6; i++)); do left=$((left + ETA[i])); done
-  printf '\n[%s/6] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
+  for ((i=n; i<=7; i++)); do left=$((left + ETA[i])); done
+  printf '\n[%s/7] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
 }
 
 command -v claude >/dev/null || { echo "Claude Code가 없어요. 먼저 설치: https://claude.com/claude-code"; exit 1; }
@@ -64,5 +64,33 @@ cp -R "$KIT"/skills/gws-* "$HOME/.claude/skills/" && ok "~/.claude/skills/gws-*"
 
 step 6 "훅·상태줄을 settings.json에 합치기(기존 설정 유지, 백업 남김)"
 /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" && ok "settings.json"
+
+step 7 "회의 녹음 받아쓰기(transcribe) — 모델 1.6GB라 가장 오래 걸려요"
+# 내 맥 안에서만 도는 음성 인식(whisper.cpp + large-v3-turbo). 녹음이 밖으로 나가지 않음.
+W="$HOME/tools/whisper.cpp"
+if ! xcode-select -p >/dev/null 2>&1; then
+  xcode-select --install >/dev/null 2>&1
+  warn "맥 개발 도구 설치 창이 떴어요 → 「설치」를 누르고 끝나면 이 설치를 한 번 더 실행해 주세요(나머지는 다 됐어요)."
+else
+  if [ ! -x "$W/build/bin/whisper-cli" ]; then
+    CMAKE=$(command -v cmake || echo "$HOME/Library/Python/3.9/bin/cmake")
+    [ -x "$CMAKE" ] || { /usr/bin/python3 -m pip install --user -q cmake >/dev/null 2>&1; CMAKE="$HOME/Library/Python/3.9/bin/cmake"; }
+    if [ ! -d "$W" ]; then
+      mkdir -p "$HOME/tools" && curl -fsSL https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.5.tar.gz | tar -xz -C "$HOME/tools" \
+        && mv "$HOME/tools/whisper.cpp-1.9.5" "$W"
+    fi
+    printf '  … 음성 인식 프로그램 만드는 중(1분 안팎)\n'
+    ( cd "$W" && "$CMAKE" -B build -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 && "$CMAKE" --build build -j --config Release --target whisper-cli >/dev/null 2>&1 ) \
+      && ok "whisper.cpp" || warn "whisper.cpp 빌드 실패(성훈님께 화면 캡처 보내 주세요)"
+  else ok "whisper.cpp(이미 있음)"; fi
+  M="$W/models/ggml-large-v3-turbo.bin"
+  if [ ! -s "$M" ] || [ "$(stat -f%z "$M")" -lt 1600000000 ]; then
+    printf '  … 음성 인식 모델 내려받는 중(1.6GB, 인터넷에 따라 3~10분)\n'
+    mkdir -p "$W/models" && curl -fL -# -C - -o "$M" https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin \
+      && ok "모델" || warn "모델 받기 실패 → 이 설치를 다시 실행하면 이어서 받아요"
+  else ok "모델(이미 있음)"; fi
+  mkdir -p "$HOME/.local/bin" && cp "$KIT/bin/transcribe" "$HOME/.local/bin/transcribe" && chmod +x "$HOME/.local/bin/transcribe" && ok "transcribe 명령"
+  grep -q '.local/bin' "$HOME/.zshrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+fi
 
 printf '\n✅ 설치 끝! 설치 페이지로 돌아가 4단계(회사 계정 연결)를 해 주세요.\n'
