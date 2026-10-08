@@ -5,7 +5,13 @@ set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
 ok()   { printf '  ✓ %s\n' "$1"; }
 warn() { printf '  ! %s\n' "$1"; }
-step() { printf '\n[%s] %s\n' "$1" "$2"; }
+# 단계별 예상 시간(초) — 남은 시간 안내용
+ETA=(0 20 150 90 20 5 5)
+step() {
+  local n=$1 left=0 i
+  for ((i=n; i<=6; i++)); do left=$((left + ETA[i])); done
+  printf '\n[%s/6] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
+}
 
 command -v claude >/dev/null || { echo "Claude Code가 없어요. 먼저 설치: https://claude.com/claude-code"; exit 1; }
 
@@ -59,4 +65,4 @@ cp -R "$KIT"/skills/gws-* "$HOME/.claude/skills/" && ok "~/.claude/skills/gws-*"
 step 6 "훅·상태줄을 settings.json에 합치기(기존 설정 유지, 백업 남김)"
 /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" && ok "settings.json"
 
-printf '\n끝! 이제 README의 "로그인" 단계를 해 주세요.\n'
+printf '\n✅ 설치 끝! 설치 페이지로 돌아가 4단계(회사 계정 연결)를 해 주세요.\n'
