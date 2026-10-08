@@ -4,6 +4,9 @@
 
 ## 1. 설치 (5분)
 
+> ⚠ **Claude에게 "이거 설치해 줘"라고 시키지 마세요.** Claude가 자기 설정을 스스로 바꾸는 건 안전장치가 막아요. 아래 명령을 **터미널에 직접** 붙여 넣거나, Claude Code 입력창에서 맨 앞에 `!`를 붙여 `! bash ~/claude-setup-kit/install.sh`처럼 실행하세요.
+
+
 ```bash
 git clone https://github.com/zkxks1004-eng/claude-setup-kit.git ~/claude-setup-kit
 bash ~/claude-setup-kit/install.sh
@@ -23,6 +26,9 @@ bash ~/claude-setup-kit/install.sh
 | 스킬 | gws 5개(시트 읽기·쓰기·드라이브) |
 
 ## 3. 로그인 (각자 1번)
+
+claude.ai 커넥터로 이미 연결된 도구(atlassian 등)는 `/mcp` 목록에 두 번 보일 수 있어요. 이미 로그인된 쪽을 쓰면 되고, 새로 추가된 쪽은 로그인하지 않아도 괜찮아요.
+
 
 | 대상 | 방법 |
 |---|---|
