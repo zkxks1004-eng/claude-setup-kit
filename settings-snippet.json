@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "jq -n --arg t \"$(date '+%Y-%m-%d(%a) %H:%M %Z')\" '{hookSpecificOutput:{hookEventName:\"UserPromptSubmit\",additionalContext:(\"현재 시각: \" + $t)}}' 2>/dev/null || true"}]}],
+    "Notification": [{"hooks": [{"type": "command", "command": "i=$(cat); p=$(printf %s \"$i\" | jq -r \".cwd // \\\"?\\\"\"); m=$(printf %s \"$i\" | jq -r \".message // \\\"작업 끝 — 입력 대기\\\"\"); osascript -e \"on run a\" -e \"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\" -e \"end run\" \"Claude · ${p##*/}\" \"$m\" 2>/dev/null || true", "timeout": 10}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "i=$(cat); p=$(printf %s \"$i\" | jq -r \".cwd // \\\"?\\\"\"); m=$(printf %s \"$i\" | jq -r \".message // \\\"작업 끝 — 입력 대기\\\"\"); osascript -e \"on run a\" -e \"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\" -e \"end run\" \"Claude · ${p##*/}\" \"$m\" 2>/dev/null || true", "timeout": 10}]}]
+  },
+  "statusLine": {"type": "command", "command": "ccstatusline", "padding": 0, "refreshInterval": 10}
+}
