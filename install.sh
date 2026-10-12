@@ -26,18 +26,20 @@ fi
 has() { case " $ROLE " in *" $1 "*) return 0;; esac; return 1; }
 printf '\n설치할 묶음: 공통%s%s%s\n' "$(has bd && echo ' + 사업개발')" "$(has planning && echo ' + 서비스기획')" "$(has dev && echo ' + 개발')"
 
-OFF=claude-plugins-official; KW=knowledge-work-plugins
-MARKETS="anthropics/claude-plugins-official anthropics/knowledge-work-plugins kenryu42/cc-marketplace zkxks1004-eng/claude-setup-kit"
-PLUGINS="cc-safety-net@cc-marketplace productivity@$KW nuua-common@nuua"
+# 고른 기준(10/12): 처음 쓰는 사람도 바로 효과 보는 것, 매 대화에 얹히는 설명·연결이 적은 것.
+# knowledge-work-plugins(data·productivity·product-management 등)는 쓰지 않는 외부 서비스 연결을 8~16개씩 달고 와서
+# /mcp가 로그인 요청으로 가득 차고 atlassian·notion이 세 번씩 떠서 뺐다.
+OFF=claude-plugins-official
+MARKETS="anthropics/claude-plugins-official kenryu42/cc-marketplace zkxks1004-eng/claude-setup-kit"
+#   atlassian: 지라·컨플루언스 연결 + 공식 스킬 6개(회의록→할 일, 현황 보고, 사내 검색, 기획서→백로그, 이슈 분류)
+#   skill-creator: 반복 업무를 내 스킬로 만들기 / claude-md-management: "앞으로 이렇게 해" 를 지침 파일에 정리
+PLUGINS="nuua-common@nuua atlassian@$OFF cc-safety-net@cc-marketplace skill-creator@$OFF claude-md-management@$OFF"
 if has bd; then
   MARKETS="$MARKETS duckdb/duckdb-skills"
-  PLUGINS="$PLUGINS data@$KW operations@$KW duckdb-skills@duckdb-skills firecrawl@$OFF figma@$OFF"
+  PLUGINS="$PLUGINS notion@$OFF figma@$OFF duckdb-skills@duckdb-skills firecrawl@$OFF"
 fi
-has planning && PLUGINS="$PLUGINS figma@$OFF product-management@$KW nuua-planning@nuua"
-if has dev; then
-  MARKETS="$MARKETS nextlevelbuilder/ui-ux-pro-max-skill DietrichGebert/ponytail"
-  PLUGINS="$PLUGINS superpowers@$OFF playwright@$OFF chrome-devtools-mcp@$OFF context7@$OFF code-review@$OFF frontend-design@$OFF hookify@$OFF claude-md-management@$OFF session-report@$OFF ui-ux-pro-max@ui-ux-pro-max-skill ponytail@ponytail"
-fi
+has planning && PLUGINS="$PLUGINS nuua-planning@nuua figma@$OFF"
+has dev && PLUGINS="$PLUGINS superpowers@$OFF feature-dev@$OFF code-review@$OFF pr-review-toolkit@$OFF commit-commands@$OFF context7@$OFF playwright@$OFF frontend-design@$OFF"
 PLUGINS=$(printf '%s\n' $PLUGINS | awk '!s[$0]++')  # 겹치는 것(figma) 한 번만
 
 step 1 "플러그인 마켓 추가"
@@ -78,14 +80,14 @@ if has bd; then
 fi
 
 step 4 "MCP 서버(사용자 범위)"
-claude mcp add -s user -t http atlassian https://mcp.atlassian.com/v1/mcp >/dev/null 2>&1; ok atlassian
 claude mcp add -s user markitdown -- uvx markitdown-mcp >/dev/null 2>&1; ok "markitdown(PDF·엑셀→글)"
 if has bd; then
-  claude mcp add -s user -t http notion https://mcp.notion.com/mcp >/dev/null 2>&1; ok notion
   command -v clasp >/dev/null && { claude mcp add -s user clasp -- "$(command -v clasp)" mcp >/dev/null 2>&1; ok clasp; } || warn "clasp 없음(선택)"
 fi
-# figma는 플러그인 안에 MCP가 들어 있어 따로 추가하면 두 번 뜬다 → 예전 키트가 넣은 것 정리
-case "$PLUGINS" in *figma@*) claude mcp remove -s user figma >/dev/null 2>&1 && ok "figma 중복 MCP 정리";; esac
+# atlassian·notion·figma는 플러그인 안에 연결이 들어 있어 따로 추가하면 두 번 뜬다 → 예전 키트가 넣은 것 정리
+for s in atlassian notion figma; do
+  case "$PLUGINS" in *"$s@"*) claude mcp remove -s user "$s" >/dev/null 2>&1 && ok "$s 중복 연결 정리";; esac
+done
 
 step 5 "스킬 복사"
 if has bd; then
