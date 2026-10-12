@@ -1,39 +1,50 @@
-# 사업개발팀 Claude Code 설정 키트 (맥)
+# 누아 Claude Code 설정 키트 (맥)
 
-성훈님 맥과 같은 플러그인·MCP·훅·도구를 한 번에 설치해요. **비밀값·토큰은 들어 있지 않아요** — 로그인은 각자 합니다.
+**공통 + 팀별 묶음**으로 플러그인·MCP·훅·도구와 누아 전용 스킬을 설치해요. 팀에 필요한 것만 깔아요. 기능이 많을수록 Claude가 매 대화마다 그 설명을 다 읽고 시작해서 느려지고 헷갈리거든요. **비밀값·토큰은 들어 있지 않아요.** 로그인은 각자 합니다.
 
-## 1. 설치 (15분 안팎 — 받아쓰기 모델 1.6GB 포함)
+설치 안내 페이지: https://nuua-claude-setup.zkxks1004.workers.dev
 
-> ⚠ **Claude에게 "이거 설치해 줘"라고 시키지 마세요.** Claude가 자기 설정을 스스로 바꾸는 건 안전장치가 막아요. 아래 명령을 **터미널에 직접** 붙여 넣거나, Claude Code 입력창에서 맨 앞에 `!`를 붙여 `! bash ~/claude-setup-kit/install.sh`처럼 실행하세요.
+## 1. 설치 (20분 안팎 — 받아쓰기 모델 1.6GB 포함)
 
+> ⚠ **Claude에게 "이거 설치해 줘"라고 시키지 마세요.** Claude가 자기 설정을 스스로 바꾸는 건 안전장치가 막아요. **터미널에 직접** 붙여 넣으세요.
 
 ```bash
-git clone https://github.com/zkxks1004-eng/claude-setup-kit.git ~/claude-setup-kit
-bash ~/claude-setup-kit/install.sh
+curl -fsSL https://raw.githubusercontent.com/zkxks1004-eng/claude-setup-kit/main/bootstrap.sh | bash
 ```
 
-먼저 있어야 하는 것: Claude Code(`claude` 명령). 상태줄·firecrawl·clasp는 Node(npm)가 있을 때만 설치돼요 — 없으면 [nodejs.org](https://nodejs.org)에서 LTS 설치 후 다시 실행.
+처음에 팀 번호를 물어요(`1` 사업개발 · `2` 서비스기획 · `3` 개발 · `0` 공통만, 여러 개면 `1 2`처럼 띄어서). 미리 정하려면 `NUUA_ROLE="planning"`을 붙여 실행하세요.
+
+먼저 있어야 하는 것: Claude Code(`claude` 명령). 상태줄·firecrawl·clasp는 Node(npm)가 있을 때만 설치돼요. 없으면 [nodejs.org](https://nodejs.org)에서 LTS를 설치한 뒤 다시 실행하세요.
 
 ## 2. 무엇이 깔리나
 
-| 종류 | 내용 |
+| 묶음 | 플러그인 | MCP·도구 |
+|---|---|---|
+| **공통** | nuua-common(사내 맥락 스킬 + 컨플루언스 덮어쓰기 전 확인 훅) · cc-safety-net(위험 명령 차단) · productivity | atlassian · markitdown · uv · 상태줄 · 알림·현재 시각 훅 · 회의 녹음 받아쓰기(transcribe) |
+| 사업개발 | data · operations · duckdb-skills · firecrawl · figma | notion · clasp · duckdb · gws + gws 스킬 5개 |
+| 서비스기획 | **nuua-planning**(회의록 · 주간 취합 · 지라 요청 정리) · figma · product-management | |
+| 개발 | superpowers · playwright · chrome-devtools-mcp · context7 · code-review · frontend-design · hookify · claude-md-management · session-report · ui-ux-pro-max · ponytail | |
+
+figma MCP는 figma 플러그인 안에 들어 있어요(예전 키트가 따로 넣은 MCP는 설치할 때 정리돼서 두 번 뜨지 않아요).
+
+### 누아 전용 스킬 (`plugins/`, 이 저장소가 플러그인 마켓 `nuua`)
+
+| 스킬 | 이럴 때 |
 |---|---|
-| 플러그인 18개 | superpowers · figma · playwright · firecrawl · chrome-devtools-mcp · context7 · code-review · frontend-design · hookify · claude-md-management · session-report · data · productivity · operations · ui-ux-pro-max · ponytail · cc-safety-net(위험 명령 차단) · duckdb-skills |
-| MCP 5개 | figma · atlassian · notion · markitdown(PDF·엑셀→글) · clasp(Apps Script) |
-| 훅 3개 | 질문마다 현재 시각 알려 주기 · 작업 끝/입력 대기 때 맥 알림(소리 Glass) |
-| 상태줄 | ccstatusline(폴더 · 모델 · 사용량) |
-| 도구 | uv · duckdb · gws(구글 시트·드라이브) · firecrawl · clasp |
-| 스킬 | gws 5개(시트 읽기·쓰기·드라이브) |
-| 회의 녹음 받아쓰기 | `transcribe 녹음.m4a` → 같은 폴더에 `.txt`. 내 맥 안에서만 처리(녹음이 밖으로 안 나감). 모델 1.6GB |
+| `nuua-context` | 사내 Confluence·Jira 작업 전체: 스페이스·프로젝트 키, 쓰기 규칙, 조회를 가볍게 하는 법 |
+| `nst-meeting-notes` | "회의록 정리해줘": 팀 형식으로 정리하고, N차 정례 회의면 지난 차수의 다음 액션을 불러와요 |
+| `nst-weekly` | "이번 주 내 진행 사항": "N월 N주" 내 칸 초안(붙여 넣기용) |
+| `jira-request` | "지라 올려줘": 중복 검색 → 프로젝트·담당 영역 제안 → 확인 후 생성 |
+
+공개 저장소라 스킬에는 사람 이름을 넣지 않아요. 담당자는 실행할 때 Confluence의 컨택 포인트 페이지를 읽어서 정해요.
 
 ## 3. 로그인 (각자 1번)
 
 claude.ai 커넥터로 이미 연결된 도구(atlassian 등)는 `/mcp` 목록에 두 번 보일 수 있어요. 이미 로그인된 쪽을 쓰면 되고, 새로 추가된 쪽은 로그인하지 않아도 괜찮아요.
 
-
 | 대상 | 방법 |
 |---|---|
-| figma · atlassian · notion | Claude Code에서 `/mcp` → 각 서버 선택 → 회사 계정으로 로그인 |
+| atlassian · figma · notion | Claude Code에서 `/mcp` → 각 서버 선택 → 회사 계정으로 로그인 |
 | gws(구글) | `gws auth login` — 구글 클라우드 OAuth 클라이언트가 필요해요. 성훈님께 설정 방법 문의 |
 | firecrawl | `firecrawl login` (무료 계정, 월 크레딧 있음) |
 | clasp | `clasp login` (Apps Script 쓸 때만) |
@@ -41,20 +52,19 @@ claude.ai 커넥터로 이미 연결된 도구(atlassian 등)는 `/mcp` 목록�
 ## 4. 확인
 
 ```bash
-claude plugin list        # 플러그인 18개
-claude mcp list           # MCP 5개
+claude plugin list        # nuua-common 등
+claude mcp list
 ```
 
 Claude Code를 새로 열고 아무 질문이나 하면 "현재 시각"이 붙고, 답이 끝나면 맥 알림이 떠요.
 
 ## 5. 업데이트
 
-```bash
-cd ~/claude-setup-kit && git pull && bash install.sh
-```
+위 한 줄 설치를 다시 실행하면 돼요. 누아 스킬은 설치할 때마다 최신으로 받아요. 스킬만 바로 받으려면 `claude plugin marketplace update nuua`를 실행하세요.
 
 ## 참고
 
 - 기존 `~/.claude/settings.json`은 지우지 않고 합쳐요. 합치기 전 파일은 `settings.json.bak_날짜`로 남아요.
+- 예전 키트(18개 전부)로 설치했다면, 팀에 없는 플러그인은 `claude plugin uninstall 이름`으로 지우면 가벼워져요.
 - 맥 알림이 안 뜨면: 시스템 설정 → 알림 → "스크립트 편집기"(또는 터미널) 알림 허용.
 - gws 자동 설치가 실패하면 [googleworkspace/cli 릴리스](https://github.com/googleworkspace/cli/releases)에서 `…apple-darwin.tar.gz`를 받아 `gws` 파일을 `~/.local/bin`에 넣어 주세요.

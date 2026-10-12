@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*(updateConfluencePage|updateConfluenceContent)",
+        "hooks": [{"type": "command", "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Confluence 기존 페이지를 통째로 덮어써요. 다른 사람이 쓰는 페이지가 아닌지, 방금 다시 읽은 본문 기준인지 확인해 주세요.\"}}'"}]
+      }
+    ]
+  }
+}

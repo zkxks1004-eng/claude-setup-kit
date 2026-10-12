@@ -1,0 +1,9 @@
+{
+  "name": "nuua",
+  "owner": {"name": "nuua 사업개발팀"},
+  "metadata": {"description": "누아 사내 Claude Code 플러그인 — 공통 맥락·안전장치와 팀별 스킬"},
+  "plugins": [
+    {"name": "nuua-common", "source": "./plugins/nuua-common", "description": "누아 공통: 사내 Confluence·Jira 맥락, 남의 페이지 덮어쓰기 확인"},
+    {"name": "nuua-planning", "source": "./plugins/nuua-planning", "description": "서비스기획팀: 회의록·주간 취합·Jira 요청 정리"}
+  ]
+}
