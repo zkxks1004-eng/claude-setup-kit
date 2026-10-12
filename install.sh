@@ -7,11 +7,11 @@ KIT="$(cd "$(dirname "$0")" && pwd)"
 ok()   { printf '  ✓ %s\n' "$1"; }
 warn() { printf '  ! %s\n' "$1"; }
 # 단계별 예상 시간(초) — 남은 시간 안내용
-ETA=(0 20 100 60 20 5 5 600)
+ETA=(0 20 100 60 20 5 600)
 step() {
   local n=$1 left=0 i
-  for ((i=n; i<=7; i++)); do left=$((left + ETA[i])); done
-  printf '\n[%s/7] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
+  for ((i=n; i<=6; i++)); do left=$((left + ETA[i])); done
+  printf '\n[%s/6] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
 }
 
 command -v claude >/dev/null || { echo "Claude Code가 없어요. 먼저 설치: https://claude.com/claude-code"; exit 1; }
@@ -66,13 +66,6 @@ fi
 if has bd; then
   command -v duckdb >/dev/null || curl -fsSL https://install.duckdb.org | sh
   command -v duckdb >/dev/null && ok "duckdb" || warn "duckdb 설치 실패(선택)"
-  if ! command -v gws >/dev/null; then
-    # Google Workspace CLI (github.com/googleworkspace/cli) — 최신 릴리스의 맥 바이너리
-    arch=$([ "$(uname -m)" = arm64 ] && echo aarch64 || echo x86_64)
-    url=$(curl -fsSL https://api.github.com/repos/googleworkspace/cli/releases/latest | grep -o "https://[^\"]*-${arch}-apple-darwin\.tar\.gz" | head -1)
-    if [ -n "$url" ]; then mkdir -p "$HOME/.local/bin" && curl -fsSL "$url" | tar -xz -C "$HOME/.local/bin" ./gws 2>/dev/null; fi
-  fi
-  command -v gws >/dev/null && ok "gws" || warn "gws 자동 설치 실패 → README의 수동 설치 참고"
   if command -v npm >/dev/null; then
     for n in firecrawl-cli @google/clasp; do npm ls -g "$n" >/dev/null 2>&1 || npm i -g "$n" >/dev/null 2>&1; done
     ok "firecrawl-cli · clasp (npm)"
@@ -89,18 +82,10 @@ for s in atlassian notion figma; do
   case "$PLUGINS" in *"$s@"*) claude mcp remove -s user "$s" >/dev/null 2>&1 && ok "$s 중복 연결 정리";; esac
 done
 
-step 5 "스킬 복사"
-if has bd; then
-  mkdir -p "$HOME/.claude/skills"
-  cp -R "$KIT"/skills/gws-* "$HOME/.claude/skills/" && ok "~/.claude/skills/gws-*(구글 시트·드라이브)"
-else
-  ok "추가로 복사할 스킬 없음"
-fi
-
-step 6 "훅·상태줄을 settings.json에 합치기(기존 설정 유지, 백업 남김)"
+step 5 "훅·상태줄을 settings.json에 합치기(기존 설정 유지, 백업 남김)"
 /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" && ok "settings.json"
 
-step 7 "회의 녹음 받아쓰기(transcribe) — 모델 1.6GB라 가장 오래 걸려요"
+step 6 "회의 녹음 받아쓰기(transcribe) — 모델 1.6GB라 가장 오래 걸려요"
 # 내 맥 안에서만 도는 음성 인식(whisper.cpp + large-v3-turbo). 녹음이 밖으로 나가지 않음.
 W="$HOME/tools/whisper.cpp"
 if ! xcode-select -p >/dev/null 2>&1; then
