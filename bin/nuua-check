@@ -19,7 +19,8 @@ v=$(claude --version 2>/dev/null | awk '{print $1}')
 if [ "$(printf '%s\n2.1.283\n' "$v" | sort -V | head -1)" = 2.1.283 ]; then ok "Claude Code $v"; else no "Claude Code $v — 오래된 버전" "터미널에 claude update"; fi
 mine=$(sed -n 's/^KIT_VER=\([0-9.]*\).*/\1/p' "$KIT/install.sh" 2>/dev/null)
 new=$(curl -fsSL --max-time 8 https://raw.githubusercontent.com/zkxks1004-eng/claude-setup-kit/main/install.sh 2>/dev/null | sed -n 's/^KIT_VER=\([0-9.]*\).*/\1/p')
-if [ -z "$mine" ]; then no "설치 키트가 없어요" "설치 사이트 1단계 명령으로 설치"
+if [ ! -f "$KIT/install.sh" ]; then no "설치 키트가 없어요" "설치 사이트 1단계 명령으로 설치"
+elif [ -z "$mine" ]; then no "설치 키트가 옛 판이에요(10/13 전)" "설치 사이트 1단계 명령으로 다시 설치"
 elif [ -n "$new" ] && [ "$mine" != "$new" ] && [ "$(printf '%s\n%s\n' "$mine" "$new" | sort -V | head -1)" = "$mine" ]; then no "설치 키트 $mine — 새 판 $new 이 있어요" "설치 사이트 1단계 명령으로 다시 설치"
 else ok "설치 키트 $mine"; fi
 
