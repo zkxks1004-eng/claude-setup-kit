@@ -4,7 +4,7 @@
 # 비밀값·토큰은 들어 있지 않음 — 로그인은 README의 "로그인" 단계에서 각자.
 set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
-KIT_VER=2026.10.12  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임)
+KIT_VER=2026.10.13  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임)
 SITE=https://nuua-claude-setup.zkxks1004.workers.dev
 ok()   { printf '  ✓ %s\n' "$1"; }
 warn() { printf '  ! %s\n' "$1"; }
@@ -65,6 +65,25 @@ step 3 "명령줄 도구"
 export PATH="$HOME/.local/bin:$PATH"
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 command -v uv >/dev/null && ok "uv" || warn "uv 설치 실패"
+# Node가 없으면 관리자 비밀번호 없이 ~/.local/node에 공식 LTS(체크섬 확인). 상태줄과 브라우저 연결 도구(playwright·chrome-devtools)가 npx로 돈다
+NODE="$HOME/.local/node"
+if ! command -v npm >/dev/null && [ ! -x "$NODE/bin/npm" ]; then
+  a=$(uname -m); [ "$a" = x86_64 ] && a=x64
+  v=$(curl -fsSL --max-time 20 https://nodejs.org/dist/index.json | /usr/bin/python3 -c 'import json,sys; print(next(x["version"] for x in json.load(sys.stdin) if x["lts"]))' 2>/dev/null)
+  f="node-$v-darwin-$a.tar.gz"; t=$(mktemp -d)
+  if [ -n "$v" ] && curl -fsSL -o "$t/$f" "https://nodejs.org/dist/$v/$f" \
+    && curl -fsSL "https://nodejs.org/dist/$v/SHASUMS256.txt" | grep " $f\$" | (cd "$t" && shasum -a 256 -c -s -) \
+    && mkdir -p "$NODE" && tar -xzf "$t/$f" -C "$NODE" --strip-components 1; then
+    ok "Node $v (~/.local/node)"
+  else
+    warn "Node 설치 실패 → nodejs.org에서 LTS 설치 후 이 설치를 다시 실행"
+  fi
+  rm -rf "$t"
+fi
+if [ -x "$NODE/bin/npm" ]; then
+  export PATH="$NODE/bin:$PATH"
+  grep -q '.local/node/bin' "$HOME/.zshrc" 2>/dev/null || echo 'export PATH="$HOME/.local/node/bin:$PATH"' >> "$HOME/.zshrc"
+fi
 if command -v npm >/dev/null; then
   npm ls -g ccstatusline >/dev/null 2>&1 || npm i -g ccstatusline >/dev/null 2>&1
   ok "ccstatusline (npm)"
