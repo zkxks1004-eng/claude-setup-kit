@@ -27,7 +27,7 @@ fi
 # 팀 고르기 — 팀마다 필요한 것만 깔아야 Claude가 가볍고 덜 헷갈린다(플러그인·도구가 많을수록 매 대화가 무거워짐).
 ROLE="${NUUA_ROLE:-}"
 if [ -z "$ROLE" ] && [ -r /dev/tty ]; then
-  printf '\n어느 팀이세요? 번호를 누르고 엔터 (여러 개면 띄어서, 예: 1 3)\n  1) 사업개발팀   2) 서비스기획팀   3) 개발   0) 공통만\n> '
+  printf '\n어느 팀이세요? 번호를 누르고 엔터 (여러 개면 띄어서, 예: 1 3)\n  1) 사업개발팀   2) 서비스기획팀   3) 개발(기술연구소)   0) 공통만(서비스운영·그로스·글로벌·품질보안실)\n> '
   read -r ans </dev/tty || ans=""
   for a in $ans; do case $a in 1) ROLE="$ROLE bd";; 2) ROLE="$ROLE planning";; 3) ROLE="$ROLE dev";; esac; done
 fi
