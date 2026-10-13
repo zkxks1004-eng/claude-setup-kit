@@ -1,0 +1,86 @@
+#!/bin/bash
+# 누아 Claude Code 점검: 로그인·등록·사용 현황 연결·연결 도구(MCP)·필요한 프로그램을 한 번에 확인. 아무것도 바꾸지 않는다.
+# 막히면 이 화면을 캡처해서 설치 담당자에게 보내면 된다.
+SITE=https://nuua-claude-setup.zkxks1004.workers.dev
+KIT="$HOME/claude-setup-kit"
+export PATH="$HOME/.local/bin:$HOME/.local/node/bin:$PATH"
+bad=0
+ok()   { printf '  ✓ %s\n' "$1"; }
+no()   { printf '  ✕ %s\n    → %s\n' "$1" "$2"; bad=$((bad + 1)); }
+note() { printf '  ! %s\n' "$1"; [ -n "${2:-}" ] && printf '    → %s\n' "$2"; }
+py()   { /usr/bin/python3 -c "$@" 2>/dev/null; }
+
+printf '\n누아 Claude Code 점검 · %s\n\n' "$(date '+%m/%d %H:%M')"
+command -v claude >/dev/null || { no "Claude Code가 없어요" "설치 사이트 1단계부터 해 주세요"; exit 1; }
+xcode-select -p >/dev/null 2>&1 || { no "맥 개발 도구가 없어요" "터미널에 xcode-select --install → 「설치」 → 끝나면 설치를 다시 실행"; exit 1; }
+
+# 1. 버전·키트
+v=$(claude --version 2>/dev/null | awk '{print $1}')
+if [ "$(printf '%s\n2.1.283\n' "$v" | sort -V | head -1)" = 2.1.283 ]; then ok "Claude Code $v"; else no "Claude Code $v — 오래된 버전" "터미널에 claude update"; fi
+mine=$(sed -n 's/^KIT_VER=\([0-9.]*\).*/\1/p' "$KIT/install.sh" 2>/dev/null)
+new=$(curl -fsSL --max-time 8 https://raw.githubusercontent.com/zkxks1004-eng/claude-setup-kit/main/install.sh 2>/dev/null | sed -n 's/^KIT_VER=\([0-9.]*\).*/\1/p')
+if [ -z "$mine" ]; then no "설치 키트가 없어요" "설치 사이트 1단계 명령으로 설치"
+elif [ -n "$new" ] && [ "$mine" != "$new" ] && [ "$(printf '%s\n%s\n' "$mine" "$new" | sort -V | head -1)" = "$mine" ]; then no "설치 키트 $mine — 새 판 $new 이 있어요" "설치 사이트 1단계 명령으로 다시 설치"
+else ok "설치 키트 $mine"; fi
+
+# 2. 설치 전에 열어 둔 Claude Code 창: 설치가 설정을 바꾼 뒤에 연 창만 새 설정을 읽는다(시각은 install.sh가 남긴 .settings_at)
+if [ -s "$KIT/.settings_at" ]; then
+  now=$(date +%s) mt=$(cat "$KIT/.settings_at") old=0
+  for p in $(pgrep -x claude); do
+    e=$(ps -o etime= -p "$p" | tr -d ' ') d=0
+    case $e in *-*) d=${e%%-*}; e=${e#*-};; esac
+    IFS=: read -r x y z <<<"$e"; [ -z "$z" ] && { z=$y; y=$x; x=0; }
+    [ $((now - (10#$d * 86400 + 10#$x * 3600 + 10#$y * 60 + 10#$z))) -lt "$mt" ] && old=$((old + 1))
+  done
+  if [ "$old" -gt 0 ]; then no "설정이 바뀌기 전에 연 Claude Code 창이 ${old}개 있어요(새 설정을 못 읽어요)" "그 창들을 닫고(/exit) 새 터미널에서 claude 로 다시 열기"
+  else ok "열려 있는 Claude Code 창은 모두 최신 설정"; fi
+fi
+
+# 3. 로그인 → 등록 → 신호
+read -r li email org <<<"$(claude auth status 2>/dev/null | py 'import json,sys
+d=json.load(sys.stdin); print(int(bool(d.get("loggedIn"))), d.get("email") or "-", (d.get("orgName") or "-").replace(" ","_"))')"
+if [ "${li:-0}" != 1 ]; then no "Claude Code에 로그인하지 않았어요" "claude 실행 → /login → 회사 계정(Claude Team)"
+elif ! [[ "$email" =~ ^[A-Za-z0-9._%+-]+@nuua\.(ai|net)$ ]]; then no "회사 메일이 아닌 계정이에요($email)" "claude 실행 → /logout 후 /login → 회사 메일로"
+elif ! [[ "$org" =~ ^[Nn][Uu][Uu][Aa]$ ]]; then no "회사(NUUA) 조직이 아닌 계정이에요(지금: ${org//_/ }) — 사용 현황이 버려져요" "claude 실행 → /logout 후 /login → 조직 고르는 화면에서 NUUA"
+else
+  ok "로그인 $email (${org//_/ })"
+  r=$(curl -fsS --max-time 10 "$SITE/api/register/status?email=$(printf %s "$email" | tr 'A-Z' 'a-z')" 2>/dev/null)
+  read -r reg seen first <<<"$(printf %s "$r" | py 'import json,sys
+d=json.load(sys.stdin); print(int(d["registered"]), int(d["seen"]), d.get("first_seen") or "-")')"
+  if [ -z "$reg" ]; then note "등록 여부를 확인하지 못했어요(인터넷 확인)"
+  elif [ "$reg" != 1 ]; then no "설치 사이트에 아직 등록하지 않았어요" "설치 사이트 6단계 「등록하기」 — 메일은 꼭 $email"
+  elif [ "$seen" != 1 ]; then no "등록은 됐는데 아직 신호가 안 왔어요" "새로 연 Claude Code에서 아무 말이나 하고 5분 뒤 nuua-check 다시"
+  else t=$(date -j -u -f '%Y-%m-%dT%H:%M:%S' "${first%.*}" +%s 2>/dev/null); ok "등록·연결됨 (첫 신호 $(TZ=Asia/Seoul date -r "${t:-0}" '+%m/%d %H:%M'))"; fi
+fi
+
+# 4. 사용 현황 보내기 설정(대화 내용은 안 보냄)
+case "$(py 'import json,pathlib
+e=json.loads((pathlib.Path.home()/".claude/settings.json").read_text()).get("env") or {}
+on=e.get("CLAUDE_CODE_ENABLE_TELEMETRY")=="1" and "nuua" in e.get("OTEL_EXPORTER_OTLP_ENDPOINT","")
+safe=all(e.get(k,"0")=="0" for k in ("OTEL_LOG_USER_PROMPTS","OTEL_LOG_TOOL_DETAILS","OTEL_LOG_ASSISTANT_RESPONSES","OTEL_LOG_TOOL_CONTENT","OTEL_LOG_RAW_API_BODIES"))
+print("on" if on and safe else "leak" if on else "off")')" in
+  on) ok "사용 현황 연결 켜짐(대화 내용 보내기는 모두 꺼짐)";;
+  leak) no "대화 내용 보내기 설정이 켜져 있어요" "설치를 다시 실행하면 꺼져요";;
+  *) note "사용 현황 연결이 꺼져 있어요(직접 끈 거면 괜찮아요)" "켜려면 설치를 다시 실행";;
+esac
+
+# 5. 연결 도구가 쓰는 프로그램
+command -v npx >/dev/null && ok "Node $(node -v 2>/dev/null)" || no "Node가 없어요 — 브라우저 등 플러그인 연결 도구가 실패해요" "설치를 다시 실행하면 자동으로 깔아요"
+command -v uvx >/dev/null && ok "uv" || no "uv가 없어요 — 문서 변환(markitdown) 연결이 실패해요" "설치를 다시 실행"
+
+# 6. 연결 도구(MCP) 실제 연결 — Claude Code가 하는 것과 같은 검사(몇 초 걸림)
+printf '  … 연결 도구 확인 중\n'
+m=$(cd /tmp && claude mcp list 2>&1 | grep ' - ')
+n_ok=$(printf '%s\n' "$m" | grep -c '✔')
+fail=$(printf '%s\n' "$m" | grep -v '✔' | grep -iv 'auth' | grep .)
+auth=$(printf '%s\n' "$m" | grep -v '✔' | grep -i 'auth' | grep .)
+[ -n "$m" ] && ok "연결 도구 ${n_ok}개 연결됨"
+[ -n "$auth" ] && note "로그인이 필요한 연결 $(printf '%s\n' "$auth" | wc -l | tr -d ' ')개: $(printf '%s\n' "$auth" | sed 's/: .*//' | paste -sd, - | sed 's/,/, /g')" "Claude Code에서 /mcp → 해당 항목 → 로그인(안 쓰는 거면 그냥 둬도 돼요)"
+if [ -n "$fail" ]; then
+  printf '%s\n' "$fail" | sed 's/: .*//' | while read -r s; do printf '  ✕ 연결 실패: %s\n' "$s"; done
+  bad=$((bad + $(printf '%s\n' "$fail" | wc -l)))
+  printf '    → 위 Node·uv가 ✕면 설치를 다시 실행. 아니면 이 화면을 설치 담당자에게\n'
+fi
+
+echo
+if [ "$bad" -eq 0 ]; then echo "✅ 문제 없어요"; else echo "문제 ${bad}개 — 위 → 대로 해 보고, 안 되면 이 화면을 캡처해서 설치 담당자에게 보내 주세요."; fi

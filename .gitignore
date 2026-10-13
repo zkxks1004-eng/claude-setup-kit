@@ -2,3 +2,4 @@ site/
 .wrangler/
 admin/
 .wrangler-shared/
+.settings_at

@@ -12,9 +12,9 @@
 curl -fsSL https://raw.githubusercontent.com/zkxks1004-eng/claude-setup-kit/main/bootstrap.sh | bash
 ```
 
-처음에 팀 번호를 물어요(`1` 사업개발 · `2` 서비스기획 · `3` 개발 · `0` 공통만, 여러 개면 `1 2`처럼 띄어서). 미리 정하려면 `NUUA_ROLE="planning"`을 붙여 실행하세요.
+처음에 팀 번호를 물어요(`1` 사업개발 · `2` 서비스기획 · `3` 개발(기술연구소) · `0` 공통만, 여러 개면 `1 2`처럼 띄어서). 미리 정하려면 `NUUA_ROLE="planning"`을 붙여 실행하세요.
 
-먼저 있어야 하는 것: Claude Code(`claude` 명령). 상태줄·firecrawl·clasp는 Node(npm)가 있을 때만 설치돼요. 없으면 [nodejs.org](https://nodejs.org)에서 LTS를 설치한 뒤 다시 실행하세요.
+먼저 있어야 하는 것: Claude Code(`claude` 명령). 맥 개발 도구(git·python3)가 없으면 설치 창을 띄우고 끝날 때까지 기다렸다가 이어서 해요. Node가 없으면 `~/.local/node`에 공식 LTS를 깔아요(관리자 비밀번호 필요 없음).
 
 ## 2. 무엇이 깔리나
 
@@ -54,11 +54,10 @@ claude.ai 커넥터로 이미 연결된 도구(atlassian 등)는 `/mcp` 목록�
 ## 4. 확인
 
 ```bash
-claude plugin list        # nuua-common 등
-claude mcp list
+nuua-check                # 로그인 메일·등록·사용 현황 연결·연결 도구·Node까지 한 번에(✓/✕ + 고치는 방법)
 ```
 
-Claude Code를 새로 열고 아무 질문이나 하면 "현재 시각"이 붙고, 답이 끝나면 맥 알림이 떠요.
+Claude Code를 새로 열고 아무 질문이나 하면 "현재 시각"이 붙고, 답이 끝나면 맥 알림이 떠요. 설치 키트에 새 판이 나오거나 Node가 없으면 Claude Code를 열 때 화면에 한 줄로 알려 줘요(6시간에 한 번 확인).
 
 ## 5. 업데이트
 
@@ -66,6 +65,7 @@ Claude Code를 새로 열고 아무 질문이나 하면 "현재 시각"이 붙�
 
 ## 참고
 
-- 기존 `~/.claude/settings.json`은 지우지 않고 합쳐요. 합치기 전 파일은 `settings.json.bak_날짜`로 남아요.
+- 기존 `~/.claude/settings.json`은 지우지 않고 합쳐요. 처음 원본은 `settings.json.nuua-first`, 매번 합치기 직전 것은 `settings.json.nuua-last`로 남아요. 직접 넣은 연결 도구·훅·수집(OTEL) 설정은 건드리지 않고, 꺼 둔 플러그인도 다시 켜지 않아요.
+- 사용 현황 보내기 끄기: `NUUA_NO_TELEMETRY=1`을 붙여 설치(다음 설치에서도 계속 꺼짐) · 다시 켜기: `NUUA_TELEMETRY=1`.
 - 예전 키트(18개 전부)로 설치했다면, 팀에 없는 플러그인은 `claude plugin disable 이름@마켓`으로 꺼 두면 가벼워져요(다시 켜기: `enable`).
 - 맥 알림이 안 뜨면: 시스템 설정 → 알림 → "스크립트 편집기"(또는 터미널) 알림 허용.
