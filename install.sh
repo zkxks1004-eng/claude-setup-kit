@@ -4,17 +4,25 @@
 # 비밀값·토큰은 들어 있지 않음 — 로그인은 README의 "로그인" 단계에서 각자.
 set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
+KIT_VER=2026.10.12  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임)
+SITE=https://nuua-claude-setup.zkxks1004.workers.dev
 ok()   { printf '  ✓ %s\n' "$1"; }
 warn() { printf '  ! %s\n' "$1"; }
 # 단계별 예상 시간(초) — 남은 시간 안내용
-ETA=(0 20 100 60 20 5 600)
+ETA=(0 20 100 60 20 5 5 600)
 step() {
   local n=$1 left=0 i
-  for ((i=n; i<=6; i++)); do left=$((left + ETA[i])); done
-  printf '\n[%s/6] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
+  for ((i=n; i<=7; i++)); do left=$((left + ETA[i])); done
+  printf '\n[%s/7] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
 }
 
 command -v claude >/dev/null || { echo "Claude Code가 없어요. 먼저 설치: https://claude.com/claude-code"; exit 1; }
+# 2.1.283부터 터미널이 auto mode(안전한 일은 묻지 않고 진행)로 시작한다 → 낮으면 업데이트
+v=$(claude --version 2>/dev/null | awk '{print $1}')
+if [ "$(printf '%s\n2.1.283\n' "$v" | sort -V | head -1)" != "2.1.283" ]; then
+  printf 'Claude Code %s → 최신으로 업데이트(auto mode 쓰려면 2.1.283 이상)\n' "${v:-?}"
+  claude update >/dev/null 2>&1 || printf '  ! 업데이트 실패 — 나중에 터미널에서 claude update\n'
+fi
 
 # 팀 고르기 — 팀마다 필요한 것만 깔아야 Claude가 가볍고 덜 헷갈린다(플러그인·도구가 많을수록 매 대화가 무거워짐).
 ROLE="${NUUA_ROLE:-}"
@@ -85,7 +93,34 @@ done
 step 5 "훅·상태줄을 settings.json에 합치기(기존 설정 유지, 백업 남김)"
 /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" && ok "settings.json"
 
-step 6 "회의 녹음 받아쓰기(transcribe) — 모델 1.6GB라 가장 오래 걸려요"
+step 6 "사용 현황 연결(대화 내용은 보내지 않아요)"
+# 질문 횟수·사용 시간·쓴 기능만 회사 관리 화면으로. 대화·파일·도구 내용은 안 보냄(아래 LOG_*·RAW_API_BODIES = 0, 트레이스 끔).
+# 회사에 저장되는 건 설치 페이지 6단계에서 등록·동의한 뒤부터(그 전 신호는 서버가 버림). 개인 맥 등은 NUUA_NO_TELEMETRY=1 → 켜 둔 것도 끔
+if [ "${NUUA_NO_TELEMETRY:-}" = 1 ]; then
+  /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" --no-telemetry && ok "사용 현황 보내기 끔(NUUA_NO_TELEMETRY=1)"
+else
+  T=""; for t in bd planning dev; do has $t && T="${T:+${T}_}$t"; done
+  ENVF=$(mktemp)
+  if ! curl -fsSL --max-time 20 "$SITE/api/telemetry-config" | /usr/bin/python3 -c '
+import json, sys
+c, team, kit = json.load(sys.stdin), sys.argv[1], sys.argv[2]
+json.dump({"CLAUDE_CODE_ENABLE_TELEMETRY": "1", "OTEL_METRICS_EXPORTER": "otlp", "OTEL_LOGS_EXPORTER": "otlp",
+  "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json", "OTEL_EXPORTER_OTLP_ENDPOINT": c["endpoint"], "OTEL_EXPORTER_OTLP_HEADERS": c["headers"],
+  "OTEL_METRIC_EXPORT_INTERVAL": str(c["metric_interval"]), "OTEL_LOGS_EXPORT_INTERVAL": str(c["logs_interval"]),
+  "OTEL_RESOURCE_ATTRIBUTES": f"nuua.team={team},nuua.kit={kit}",
+  "OTEL_LOG_USER_PROMPTS": "0", "OTEL_LOG_TOOL_DETAILS": "0", "OTEL_LOG_ASSISTANT_RESPONSES": "0", "OTEL_LOG_TOOL_CONTENT": "0",
+  "OTEL_LOG_RAW_API_BODIES": "0", "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "0", "OTEL_TRACES_EXPORTER": "none"}, sys.stdout)
+' "${T:-common}" "$KIT_VER" > "$ENVF" 2>/dev/null; then
+    warn "사용 현황 설정을 못 받았어요(인터넷 확인). 나머지는 계속 — 나중에 설치를 다시 하면 연결돼요."
+  elif /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" "$ENVF"; then
+    ok "사용 현황 연결(새로 여는 Claude Code부터 · 저장은 설치 페이지 6단계 등록 뒤부터 · 끄려면 NUUA_NO_TELEMETRY=1로 다시 설치)"
+  else
+    warn "~/.claude/settings.json 형식이 깨져 있어 사용 현황 연결을 못 했어요. 위 오류 화면을 캡처해서 설치 담당자에게 보내 주세요."
+  fi
+  rm -f "$ENVF"
+fi
+
+step 7 "회의 녹음 받아쓰기(transcribe) — 모델 1.6GB라 가장 오래 걸려요"
 # 내 맥 안에서만 도는 음성 인식(whisper.cpp + large-v3-turbo). 녹음이 밖으로 나가지 않음.
 W="$HOME/tools/whisper.cpp"
 if ! xcode-select -p >/dev/null 2>&1; then
@@ -101,7 +136,7 @@ else
     fi
     printf '  … 음성 인식 프로그램 만드는 중(1분 안팎)\n'
     ( cd "$W" && "$CMAKE" -B build -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 && "$CMAKE" --build build -j --config Release --target whisper-cli >/dev/null 2>&1 ) \
-      && ok "whisper.cpp" || warn "whisper.cpp 빌드 실패(성훈님께 화면 캡처 보내 주세요)"
+      && ok "whisper.cpp" || warn "whisper.cpp 빌드 실패(설치 담당자에게 화면 캡처 보내 주세요)"
   else ok "whisper.cpp(이미 있음)"; fi
   M="$W/models/ggml-large-v3-turbo.bin"
   if [ ! -s "$M" ] || [ "$(stat -f%z "$M")" -lt 1600000000 ]; then
