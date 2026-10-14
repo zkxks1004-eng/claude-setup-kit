@@ -4,14 +4,19 @@
 # 비밀값·토큰은 들어 있지 않음 — 로그인은 README의 "로그인" 단계에서 각자.
 set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
-KIT_VER=2026.10.13.2  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임 · Claude Code를 열 때 새 판 알림)
+KIT_VER=2026.10.14.1  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임 · Claude Code를 열 때 새 판 알림)
 SITE=https://nuua-claude-setup.zkxks1004.workers.dev
 FAILS=()
 ok()   { printf '  ✓ %s\n' "$1"; }
 warn() { printf '  ! %s\n' "$1"; FAILS+=("$1"); }   # ! 는 진짜 실패만(이미 있는 건 ✓)
 skip() { printf '  – %s\n' "$1"; }                  # 고른 묶음에 없거나 일부러 건너뜀
-# .zshrc 끝에 한 줄(마지막 줄이 줄바꿈 없이 끝나면 붙지 않게 먼저 줄바꿈)
-addline() { grep -qF "$2" "$HOME/.zshrc" 2>/dev/null && return; [ -s "$HOME/.zshrc" ] && [ -n "$(tail -c1 "$HOME/.zshrc")" ] && echo >> "$HOME/.zshrc"; echo "$1" >> "$HOME/.zshrc"; }
+# 셸 설정 파일 끝에 한 줄(마지막 줄이 줄바꿈 없이 끝나면 붙지 않게 먼저 줄바꿈). zsh는 .zshrc,
+# bash는 이미 있는 .bash_profile·.bash_login·.profile 중 첫 파일(새 .bash_profile을 만들면 bash가 .profile을 안 읽게 됨)
+case "${SHELL:-}" in
+  */bash) RC=$(ls "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile" 2>/dev/null | head -1); RC=${RC:-$HOME/.bash_profile} ;;
+  *) RC="$HOME/.zshrc" ;;
+esac
+addline() { grep -qF "$2" "$RC" 2>/dev/null && return; [ -s "$RC" ] && [ -n "$(tail -c1 "$RC")" ] && echo >> "$RC"; echo "$1" >> "$RC"; }
 # 단계별 예상 시간(초) — 남은 시간 안내용
 ETA=(0 20 100 60 20 5 5 600)
 step() {
@@ -26,7 +31,7 @@ devtools() { local d; d=$(xcode-select -p 2>/dev/null) && [ -x "$d/usr/bin/git" 
 if ! devtools; then
   xcode-select --install >/dev/null 2>&1
   printf '\n맥 개발 도구가 필요해요. 방금 뜬 창에서 「설치」를 눌러 주세요(5~15분). 끝나면 자동으로 이어서 해요.\n  (창이 안 보이면 Dock이나 다른 창 뒤를 확인)\n'
-  for _ in $(seq 180); do devtools && break; sleep 10; done
+  for i in $(seq 180); do devtools && break; [ $((i % 6)) = 0 ] && printf '  … 기다리는 중(%s분) — 창에서 취소했다면 Ctrl+C 후 설치 명령을 다시 실행\n' $((i / 6)); sleep 10; done
   devtools || { echo "  ! 30분이 지나도 설치가 안 끝났어요. 설치가 끝난 뒤 이 설치를 다시 실행해 주세요."; exit 1; }
   ok "맥 개발 도구"
 fi
@@ -135,14 +140,15 @@ addline 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
 
 step 6 "사용 현황 연결(대화 내용은 보내지 않아요)"
 # 질문 횟수·사용 시간·쓴 기능만 회사 관리 화면으로. 대화·파일·도구 내용은 안 보냄(아래 LOG_*·RAW_API_BODIES = 0, 트레이스 끔).
-# 회사에 저장되는 건 설치 페이지 6단계에서 등록·동의한 뒤부터(그 전 신호는 서버가 버림).
-# 끄기: NUUA_NO_TELEMETRY=1 → 끄고 표시 파일을 남겨 다음 설치에서도 계속 꺼 둠. 다시 켜기: NUUA_TELEMETRY=1
+# 회사에 저장되는 건 설치 페이지 6단계에서 등록·동의한 뒤 도착한 기록부터(그 전에 온 신호는 서버가 버림).
+# 끄기: 표시 파일(~/.claude/.nuua-no-telemetry)이 있으면 끄고 다음 설치에서도 계속 꺼 둠 — 안내는 설치 페이지 6단계의 touch 명령.
+# 다시 켜기: 표시 파일을 지우고 설치. (NUUA_NO_TELEMETRY=1·NUUA_TELEMETRY=1도 되지만 `| bash` 쪽에 붙여야 해서 안내하지 않음)
 OPT="$HOME/.claude/.nuua-no-telemetry"
 [ "${NUUA_TELEMETRY:-}" = 1 ] && rm -f "$OPT"
 if [ "${NUUA_NO_TELEMETRY:-}" = 1 ] || [ -f "$OPT" ]; then
   mkdir -p "$HOME/.claude" && touch "$OPT"
   /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" --no-telemetry >/dev/null 2>&1 \
-    && ok "사용 현황 보내기 꺼 둠(다시 켜려면 NUUA_TELEMETRY=1을 붙여 설치)" || warn "사용 현황 끄기 실패 — 캡처해서 설치 담당자에게"
+    && ok "사용 현황 보내기 꺼 둠(다시 켜려면 rm ~/.claude/.nuua-no-telemetry 후 설치를 다시)" || warn "사용 현황 끄기 실패 — 캡처해서 설치 담당자에게"
 else
   T=""; for t in bd planning dev; do has $t && T="${T:+${T}_}$t"; done
   ENVF=$(mktemp)
@@ -161,7 +167,7 @@ json.dump({"CLAUDE_CODE_ENABLE_TELEMETRY": "1", "OTEL_METRICS_EXPORTER": "otlp",
   else
     /usr/bin/python3 "$KIT/merge_settings.py" "$KIT/settings-snippet.json" "$ENVF" >/dev/null 2>&1
     case $? in
-      0) ok "사용 현황 연결(새로 여는 Claude Code부터 · 저장은 설치 페이지 6단계 등록 뒤부터 · 끄려면 NUUA_NO_TELEMETRY=1로 다시 설치)";;
+      0) ok "사용 현황 연결(새로 여는 Claude Code부터 · 저장은 설치 페이지 6단계 등록 뒤부터 · 끄는 법은 설치 페이지 6단계)";;
       3) skip "직접 설정한 사용 현황 보내기(OTEL 주소)가 있어서 건드리지 않았어요";;
       *) warn "~/.claude/settings.json 형식이 깨져 있어 사용 현황 연결을 못 했어요 — 캡처해서 설치 담당자에게";;
     esac
@@ -185,7 +191,7 @@ if [ ! -x "$W/build/bin/whisper-cli" ]; then
     && ok "whisper.cpp" || warn "whisper.cpp 빌드 실패(받아쓰기만 안 돼요)"
 else ok "whisper.cpp(이미 있음)"; fi
 M="$W/models/ggml-large-v3-turbo.bin"
-if [ ! -s "$M" ] || [ "$(stat -f%z "$M")" -lt 1600000000 ]; then
+if [ "$(stat -f%z "$M" 2>/dev/null)" != 1624555275 ]; then  # 다 받은 크기와 다르면 이어받기(-C -)
   printf '  … 음성 인식 모델 내려받는 중(1.6GB, 인터넷에 따라 3~10분)\n'
   mkdir -p "$W/models" && curl -fL -# -C - -o "$M" https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin \
     && ok "모델" || warn "받아쓰기 모델 받기 실패 → 이 설치를 다시 실행하면 이어서 받아요"
@@ -193,10 +199,10 @@ else ok "모델(이미 있음)"; fi
 cp "$KIT/bin/transcribe" "$HOME/.local/bin/transcribe" && chmod +x "$HOME/.local/bin/transcribe" && ok "transcribe 명령" || warn "transcribe 명령 복사 실패"
 
 if [ ${#FAILS[@]} -eq 0 ]; then
-  printf '\n✅ 설치 끝! 설치 페이지로 돌아가 4단계(회사 계정 연결)를 해 주세요.\n   막히면 새 터미널에 nuua-check → 무엇이 문제인지 알려 줘요.\n'
+  printf '\n✅ 설치 끝! ⌘N으로 새 터미널 창을 열고(이 창은 새 설정을 몰라요) 설치 페이지 4단계(회사 계정 연결)를 해 주세요.\n   막히면 새 터미널에 nuua-check → 무엇이 문제인지 알려 줘요.\n'
 else
   printf '\n⚠ 설치는 끝났지만 %s개가 실패했어요:\n' "${#FAILS[@]}"
   for f in "${FAILS[@]}"; do printf '   ! %s\n' "$f"; done
-  printf '   → 이 설치를 한 번 더 실행하면 실패한 것만 다시 해요. 그래도 남으면 이 화면을 캡처해서 설치 담당자에게 보내 주세요.\n   나머지는 설치 페이지 4단계(회사 계정 연결)부터 이어서 하면 돼요.\n'
+  printf '   → 이 설치를 한 번 더 실행하면 실패한 것만 다시 해요. 그래도 남으면 이 화면을 캡처해서 설치 담당자에게 보내 주세요.\n   나머지는 ⌘N 새 터미널 창에서 설치 페이지 4단계(회사 계정 연결)부터 이어서 하면 돼요.\n'
   exit 1
 fi

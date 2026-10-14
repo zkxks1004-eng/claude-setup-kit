@@ -9,6 +9,9 @@ add() { msg="${msg:+$msg · }$1"; }
 mine=$(sed -n 's/^KIT_VER=\([0-9.]*\).*/\1/p' "$HOME/claude-setup-kit/install.sh" 2>/dev/null)
 new=$(curl -fsSL --max-time 3 https://raw.githubusercontent.com/zkxks1004-eng/claude-setup-kit/main/install.sh 2>/dev/null | sed -n 's/^KIT_VER=\([0-9.]*\).*/\1/p')
 [ -n "$mine" ] && [ -n "$new" ] && [ "$mine" != "$new" ] && [ "$(printf '%s\n%s\n' "$mine" "$new" | sort -V | head -1)" = "$mine" ] && add "설치 키트 새 판($new)이 나왔어요 → 설치 사이트 1단계 명령으로 다시 설치"
-PATH="$HOME/.local/bin:$HOME/.local/node/bin:$PATH" command -v npx >/dev/null || add "Node가 없어 브라우저 등 일부 연결 도구가 안 돼요 → 설치를 다시 실행"
+if ! command -v npx >/dev/null; then  # 훅은 Claude Code를 연 터미널의 PATH를 그대로 씀
+  if [ -x "$HOME/.local/node/bin/npx" ]; then add "설치 전부터 열려 있던 터미널 창에서 연 Claude Code예요(위험 명령 막기·상태 줄이 안 돼요) → ⌘N 새 창에서 claude"
+  else add "Node가 없어 브라우저 등 일부 연결 도구가 안 돼요 → 설치를 다시 실행"; fi
+fi
 [ -n "$msg" ] && printf '{"systemMessage":"누아 안내: %s (자세히: 터미널에 nuua-check)"}\n' "$msg"
 exit 0
