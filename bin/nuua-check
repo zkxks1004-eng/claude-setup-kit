@@ -71,7 +71,14 @@ command -v uvx >/dev/null && ok "uv" || no "uv가 없어요 — 문서 변환(ma
 
 # 6. 연결 도구(MCP) 실제 연결 — Claude Code가 하는 것과 같은 검사(몇 초 걸림)
 printf '  … 연결 도구 확인 중\n'
-m=$(cd /tmp && claude mcp list 2>&1 | grep ' - ')
+lst() { (cd /tmp && claude mcp list 2>&1 | grep ' - '); }
+m=$(lst)
+# 원격 연결은 잠깐 늦으면 실패로 찍힘(10/14 실측) → 실패가 있으면 한 번 더 보고 두 번 다 실패한 것만 실패
+f1=$(printf '%s\n' "$m" | grep -v '✔' | grep -iv 'auth' | sed 's/: .*//' | grep .)
+again() { lst | while IFS= read -r l; do
+  if printf '%s\n' "$l" | grep -q -e '✔' -ie 'auth' || printf '%s\n' "$f1" | grep -qxF "${l%%: *}"; then echo "$l"; else echo "${l% - *} - ✔ Connected"; fi
+done; }
+[ -n "$f1" ] && m=$(again)
 n_ok=$(printf '%s\n' "$m" | grep -c '✔')
 fail=$(printf '%s\n' "$m" | grep -v '✔' | grep -iv 'auth' | grep .)
 auth=$(printf '%s\n' "$m" | grep -v '✔' | grep -i 'auth' | grep .)
