@@ -13,6 +13,8 @@ KIT_ENV = {'CLAUDE_CODE_ENABLE_TELEMETRY', 'OTEL_METRICS_EXPORTER', 'OTEL_LOGS_E
            'OTEL_TRACES_EXPORTER'}
 # 예전 키트가 넣은 훅 명령(jq를 써서 macOS 14에선 조용히 안 됨) → 새 명령으로 바꾸려고 먼저 뺀다
 OLD_HOOKS = {
+    # 10/14 전 알림 명령(Notification·Stop 같은 명령) → Notification은 idle_prompt를 건너뛰는 새 명령으로 바뀜. Stop은 같은 명령을 다시 넣음
+    '/usr/bin/python3 -c \'import json,os,subprocess,sys\nd=json.load(sys.stdin)\nsubprocess.run(["osascript","-e","on run a","-e","display notification (item 2 of a) with title (item 1 of a) sound name \\"Glass\\"","-e","end run","Claude · "+os.path.basename(d.get("cwd") or "?"),d.get("message") or "작업 끝 — 입력 대기"])\' 2>/dev/null || true',
     "jq -n --arg t \"$(date '+%Y-%m-%d(%a) %H:%M %Z')\" '{hookSpecificOutput:{hookEventName:\"UserPromptSubmit\",additionalContext:(\"현재 시각: \" + $t)}}' 2>/dev/null || true",
     "i=$(cat); p=$(printf %s \"$i\" | jq -r \".cwd // \\\"?\\\"\"); m=$(printf %s \"$i\" | jq -r \".message // \\\"작업 끝 — 입력 대기\\\"\"); osascript -e \"on run a\" -e \"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\" -e \"end run\" \"Claude · ${p##*/}\" \"$m\" 2>/dev/null || true",
 }

@@ -1,9 +1,64 @@
 {
   "hooks": {
-    "SessionStart": [{"hooks": [{"type": "command", "command": "~/.local/bin/nuua-hint 2>/dev/null || true", "timeout": 5}]}],
-    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "echo \"현재 시각: $(date '+%Y-%m-%d(%a) %H:%M %Z')\""}]}],
-    "Notification": [{"hooks": [{"type": "command", "command": "/usr/bin/python3 -c 'import json,os,subprocess,sys\nd=json.load(sys.stdin)\nsubprocess.run([\"osascript\",\"-e\",\"on run a\",\"-e\",\"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\",\"-e\",\"end run\",\"Claude · \"+os.path.basename(d.get(\"cwd\") or \"?\"),d.get(\"message\") or \"작업 끝 — 입력 대기\"])' 2>/dev/null || true", "timeout": 10}]}],
-    "Stop": [{"hooks": [{"type": "command", "command": "/usr/bin/python3 -c 'import json,os,subprocess,sys\nd=json.load(sys.stdin)\nsubprocess.run([\"osascript\",\"-e\",\"on run a\",\"-e\",\"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\",\"-e\",\"end run\",\"Claude · \"+os.path.basename(d.get(\"cwd\") or \"?\"),d.get(\"message\") or \"작업 끝 — 입력 대기\"])' 2>/dev/null || true", "timeout": 10}]}]
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.local/bin/nuua-hint 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"현재 시각: $(date '+%Y-%m-%d(%a) %H:%M %Z')\""
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 -c 'import json,os,subprocess,sys\nd=json.load(sys.stdin)\nif d.get(\"notification_type\")==\"idle_prompt\": sys.exit()\nsubprocess.run([\"osascript\",\"-e\",\"on run a\",\"-e\",\"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\",\"-e\",\"end run\",\"Claude · \"+os.path.basename(d.get(\"cwd\") or \"?\"),d.get(\"message\") or \"입력을 기다려요\"])' 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 -c 'import json,os,subprocess,sys\nd=json.load(sys.stdin)\nsubprocess.run([\"osascript\",\"-e\",\"on run a\",\"-e\",\"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\",\"-e\",\"end run\",\"Claude · \"+os.path.basename(d.get(\"cwd\") or \"?\"),d.get(\"message\") or \"작업 끝 — 입력 대기\"])' 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 -c 'import json,os,subprocess,sys\nd=json.load(sys.stdin)\nm={\"rate_limit\":\"한도에 걸려 멈췄어요 — /usage로 남은 한도 확인\",\"authentication_failed\":\"로그인 문제로 멈췄어요 — /login으로 회사 메일 다시\",\"oauth_org_not_allowed\":\"회사(NUUA) 조직이 아니라 멈췄어요 — /login으로 다시\"}.get(d.get(\"error\") or \"\",\"오류로 멈췄어요 — Claude Code 화면을 확인해 주세요\")\nsubprocess.run([\"osascript\",\"-e\",\"on run a\",\"-e\",\"display notification (item 2 of a) with title (item 1 of a) sound name \\\"Glass\\\"\",\"-e\",\"end run\",\"Claude · \"+os.path.basename(d.get(\"cwd\") or \"?\"),m])' 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   },
-  "statusLine": {"type": "command", "command": "ccstatusline", "padding": 0, "refreshInterval": 10}
+  "statusLine": {
+    "type": "command",
+    "command": "ccstatusline",
+    "padding": 0,
+    "refreshInterval": 10
+  }
 }

@@ -4,7 +4,7 @@
 # 비밀값·토큰은 들어 있지 않음 — 로그인은 README의 "로그인" 단계에서 각자.
 set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
-KIT_VER=2026.10.14.1  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임 · Claude Code를 열 때 새 판 알림)
+KIT_VER=2026.10.14.2  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임 · Claude Code를 열 때 새 판 알림)
 SITE=https://nuua-claude-setup.zkxks1004.workers.dev
 FAILS=()
 ok()   { printf '  ✓ %s\n' "$1"; }
