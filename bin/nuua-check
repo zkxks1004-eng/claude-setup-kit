@@ -76,6 +76,10 @@ n_ok=$(printf '%s\n' "$m" | grep -c '✔')
 fail=$(printf '%s\n' "$m" | grep -v '✔' | grep -iv 'auth' | grep .)
 auth=$(printf '%s\n' "$m" | grep -v '✔' | grep -i 'auth' | grep .)
 [ -n "$m" ] && ok "연결 도구 ${n_ok}개 연결됨"
+# 같은 주소가 다른 이름으로 이미 연결돼 있으면(예: claude.ai 커넥터 + 플러그인) 로그인할 필요 없음
+on=$(printf '%s\n' "$m" | grep '✔' | grep -o 'https\{0,1\}://[^ ]*' | sed 's/$/ /')
+dup=; [ -n "$on" ] && [ -n "$auth" ] && dup=$(printf '%s\n' "$auth" | grep -F -f <(printf '%s\n' "$on")) && auth=$(printf '%s\n' "$auth" | grep -v -F -f <(printf '%s\n' "$on"))
+[ -n "$dup" ] && ok "같은 주소가 이미 연결돼 있어 로그인 안 해도 돼요: $(printf '%s\n' "$dup" | sed 's/: .*//' | paste -sd, - | sed 's/,/, /g')"
 [ -n "$auth" ] && note "로그인이 필요한 연결 $(printf '%s\n' "$auth" | wc -l | tr -d ' ')개: $(printf '%s\n' "$auth" | sed 's/: .*//' | paste -sd, - | sed 's/,/, /g')" "Claude Code에서 /mcp → 해당 항목 → 로그인(안 쓰는 거면 그냥 둬도 돼요)"
 if [ -n "$fail" ]; then
   printf '%s\n' "$fail" | sed 's/: .*//' | while read -r s; do printf '  ✕ 연결 실패: %s\n' "$s"; done
