@@ -35,6 +35,7 @@ curl -fsSL https://raw.githubusercontent.com/zkxks1004-eng/claude-setup-kit/main
 | 스킬 | 이럴 때 |
 |---|---|
 | `nuua-context` | 사내 Confluence·Jira 작업 전체: 스페이스·프로젝트 키, 쓰기 규칙, 조회를 가볍게 하는 법 |
+| `prompt-optimizer` | "프롬프트 다듬어줘": 한 줄 요청 → 최대 3개 되묻기 → 붙여 넣을 AI에 맞춘 마크다운 프롬프트(복사·저장·바로 실행). 웹 도구 「누아 프롬프트 최적화」와 같은 규칙 |
 | `nst-meeting-notes` | "회의록 정리해줘": 팀 형식으로 정리하고, N차 정례 회의면 지난 차수의 다음 액션을 불러와요 |
 | `nst-weekly` | "이번 주 내 진행 사항": "N월 N주" 내 칸 초안(붙여 넣기용) |
 | `jira-request` | "지라 올려줘": 중복 검색 → 프로젝트·담당 영역 제안 → 확인 후 생성 |
