@@ -4,7 +4,7 @@
 # 비밀값·토큰은 들어 있지 않음 — 로그인은 README의 "로그인" 단계에서 각자.
 set -u
 KIT="$(cd "$(dirname "$0")" && pwd)"
-KIT_VER=2026.10.14.2  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임 · Claude Code를 열 때 새 판 알림)
+KIT_VER=2026.10.29.1  # 키트를 고치면 날짜도 바꾸기(관리 화면에서 옛 키트 쓰는 사람이 보임 · Claude Code를 열 때 새 판 알림)
 SITE=https://nuua-claude-setup.zkxks1004.workers.dev
 FAILS=()
 ok()   { printf '  ✓ %s\n' "$1"; }
@@ -25,7 +25,18 @@ step() {
   printf '\n[%s/7] %s  ·  남은 시간 약 %s분\n' "$n" "$2" "$(( (left + 59) / 60 ))"
 }
 
-command -v claude >/dev/null || { echo "Claude Code가 없어요. 먼저 설치: https://claude.com/claude-code"; exit 1; }
+# Claude Code 공식 설치기는 ~/.local/bin에 까는데, 방금 설치한 창이나 PATH 줄이 없는 셸에선 claude를 못 찾는다
+# (10/29 "깔려 있는데 인식이 안 됨") → 흔한 설치 자리를 먼저 PATH에 더하고 찾는다. ~/.local/bin은 아래 5단계에서 셸 설정에도 넣음
+for d in "$HOME/.local/bin" "$HOME/.claude/local" /opt/homebrew/bin /usr/local/bin; do
+  [ -x "$d/claude" ] && case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
+done
+export PATH
+if ! command -v claude >/dev/null; then
+  printf '터미널용 Claude Code를 찾지 못했어요.\n'
+  printf '  · Claude 데스크톱 앱만 있다면 터미널용을 따로 깔아야 해요: curl -fsSL https://claude.ai/install.sh | bash\n'
+  printf '  · 방금 깔았다면 이 창을 닫고 새 터미널 창(⌘N)에서 설치 명령을 다시 붙여 넣어 주세요.\n'
+  exit 1
+fi
 # 맥 개발 도구(git·python3)가 없으면 플러그인 받기·설정 합치기가 전부 실패한다 → 맨 먼저 깔고 git·python3가 생길 때까지 기다림
 devtools() { local d; d=$(xcode-select -p 2>/dev/null) && [ -x "$d/usr/bin/git" ] && [ -x "$d/usr/bin/python3" ]; }
 if ! devtools; then

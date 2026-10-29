@@ -11,7 +11,7 @@ note() { printf '  ! %s\n' "$1"; [ -n "${2:-}" ] && printf '    → %s\n' "$2"; 
 py()   { /usr/bin/python3 -c "$@" 2>/dev/null; }
 
 printf '\n누아 Claude Code 점검 · %s\n\n' "$(date '+%m/%d %H:%M')"
-command -v claude >/dev/null || { no "Claude Code가 없어요" "설치 사이트 1단계부터 해 주세요"; exit 1; }
+command -v claude >/dev/null || { no "터미널용 Claude Code가 없어요" "데스크톱 앱만 있다면 curl -fsSL https://claude.ai/install.sh | bash 로 터미널용을 깔고 설치 사이트 1단계부터"; exit 1; }
 xcode-select -p >/dev/null 2>&1 || { no "맥 개발 도구가 없어요" "터미널에 xcode-select --install → 「설치」 → 끝나면 설치를 다시 실행"; exit 1; }
 
 # 1. 버전·키트
